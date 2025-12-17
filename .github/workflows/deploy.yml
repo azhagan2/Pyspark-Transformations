@@ -1,0 +1,74 @@
+name: Custome Analytics Code Deployment 
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v3
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ secrets.AWS_REGION }}
+
+    # ✅ Set up Python
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
+
+    # ✅ Install dependencies
+    - name: Install dependencies
+      run: |
+        pip install -r requirements.txt
+        pip install pytest pytest-cov wheel setuptools
+
+    - name: Install package
+      run: pip install -e .
+
+    # ✅ Run tests (with coverage + HTML report)
+    - name: Run tests with coverage
+      run: |
+        pytest -v -s \
+          --cov=glue_etl_pipeline \
+          --cov-report=term-missing \
+          --cov-report=html \
+          tests/
+
+    # ✅ Upload HTML coverage report
+    - name: Upload coverage report
+      uses: actions/upload-artifact@v4
+      with:
+        name: html-coverage-report
+        path: htmlcov
+
+
+    #✅ Build wheel package
+
+    - name: Clean old wheel files
+      run: rm -rf dist/ build/ *.egg-info
+      
+    - name: Create wheel file
+      run: python setup.py bdist_wheel
+
+    - name: Get wheel filename
+      run: |
+        WHEEL_FILE=$(ls dist/*.whl | head -n 1)
+        echo "WHEEL_FILE=$WHEEL_FILE" >> $GITHUB_ENV
+
+
+    # ✅ Copy artifacts to S3
+    - name: Copy wheel file 
+      run: aws s3 cp "$WHEEL_FILE" s3://customer-analytics-nov-2025-az/code/customer_analytics/
+
+    - name: Copy template file 
+      run: aws s3 cp glue_upload_script s3://customer-analytics-nov-2025-az/code/customer_analytics/ --recursive
