@@ -68,7 +68,7 @@ jobs:
 
     # ✅ Copy artifacts to S3
     - name: Copy wheel file 
-      run: aws s3 cp "$WHEEL_FILE" s3://customer-analytics-nov-2025-az/code/customer_analytics/
+      run: aws s3 cp "$WHEEL_FILE" s3://customer360-az/code/customer_analytics/
 
     - name: Copy template file 
-      run: aws s3 cp glue_upload_script s3://customer-analytics-nov-2025-az/code/customer_analytics/ --recursive
+      run: aws s3 cp glue_upload_script s3://customer360-az/code/customer_analytics/ --recursive
